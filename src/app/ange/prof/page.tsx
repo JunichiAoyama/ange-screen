@@ -1,13 +1,16 @@
 "use client";
 import girls from "@/app/ange/prof.json";
 import Image from "next/image";
-import React, { FC } from "react";
+import React, { FC, useEffect } from "react";
 import "swiper/css";
 import { Swiper, SwiperSlide } from "swiper/react";
 
 type ProfProps = {};
 
 const Prof: FC<ProfProps> = (props) => {
+	useEffect(() => {
+		console.log("ページが読み込まれました。");
+	}, []);
 	return (
 		<>
 			<header className="fixed left-0 right-0 top-0 z-50 w-full">
@@ -45,7 +48,7 @@ const Prof: FC<ProfProps> = (props) => {
 										<div className="relative h-[calc(100vw_-_2rem)] w-full">
 											<Image
 												className="block"
-												src={`/images/prof/prof_${item.id}.jpg?ab`}
+												src={`/images/prof/prof_${item.id}.jpg?abv`}
 												alt="Next.js"
 												priority
 												fill
@@ -61,7 +64,7 @@ const Prof: FC<ProfProps> = (props) => {
 															<span className="relative mr-3 block h-15vw w-16vw">
 																<Image
 																	className="block rounded-full"
-																	src={`/images/prof/prof_${item.id}-${index}.jpg?ab`}
+																	src={`/images/prof/prof_${item.id}-${index}.jpg?abv`}
 																	alt="Next.js"
 																	sizes="200"
 																	fill
@@ -72,6 +75,7 @@ const Prof: FC<ProfProps> = (props) => {
 													),
 												)}
 										</div>
+
 										<div className="relative mx-6 my-3 flex items-center justify-start ">
 											<span className=" rounded bg-red-700 px-2 py-1 text-3vw font-normal text-white">
 												NEW
