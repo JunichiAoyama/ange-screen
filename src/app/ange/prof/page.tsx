@@ -1,19 +1,41 @@
 "use client";
 import girls from "@/app/ange/prof.json";
 import Image from "next/image";
-import React, { FC, useEffect } from "react";
+import React, { FC, useEffect, useState } from "react";
 import "swiper/css";
 import { Swiper, SwiperSlide } from "swiper/react";
 
 type ProfProps = {};
 
 const Prof: FC<ProfProps> = (props) => {
+	const [activeIndex, setActiveIndex] = useState(0);
 	useEffect(() => {
 		console.log("ページが読み込まれました。");
 	}, []);
+	useEffect(() => {
+		// iOS Safariのアドレス/メニューバー（ツールバー）色をスライドに合わせて同期
+		// 4枚目: #FF8888 / それ以外: Tailwind bg-gray-100 相当 (#f3f4f6)
+		const target = activeIndex === 3 ? "#FF8888" : "#f3f4f6";
+		try {
+			// ページ背景自体を変更（ブラウザUIの色に影響させるため html, body へ適用）
+			document.documentElement.style.backgroundColor = target;
+			document.body.style.backgroundColor = target;
+
+			// iOS Safari 等のツールバー色を変更（theme-color メタタグ）
+			let themeMeta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+			if (!themeMeta) {
+				themeMeta = document.createElement("meta");
+				themeMeta.name = "theme-color";
+				document.head.appendChild(themeMeta);
+			}
+			themeMeta.setAttribute("content", target);
+		} catch {
+			// SSR ガード（クライアントでのみ実行）
+		}
+	}, [activeIndex]);
 	return (
 		<>
-			<header className="fixed left-0 right-0 top-0 z-50 w-full">
+			<header className={`fixed left-0 right-0 top-0 z-50 w-full ${activeIndex === 3 ? "hidden" : ""}`}>
 				<Image
 					className="image-fit"
 					src={`/images/_header_prof.png?ab`}
@@ -22,13 +44,15 @@ const Prof: FC<ProfProps> = (props) => {
 					priority
 				/>
 			</header>
-			<main className="min-h-screen bg-gray-100">
-				<div className="girlScroll relative h-100vh w-100vw overflow-hidden">
+			<main className={`min-h-screen ${activeIndex === 3 ? "bg-[#FF8888]" : "bg-gray-100"}`}>
+				<div
+					className={`girlScroll relative h-100vh w-100vw overflow-hidden ${activeIndex === 3 ? "hidden" : ""}`}
+				>
 					<Swiper
 						className="girlScroll"
 						spaceBetween={0}
 						slidesPerView={1}
-						onSlideChange={() => console.log("slide change")}
+						onSlideChange={(swiper) => setActiveIndex(swiper.activeIndex)}
 						onSwiper={(swiper) => console.log(swiper)}
 					>
 						{girls.map((item, index) => (
@@ -129,7 +153,9 @@ const Prof: FC<ProfProps> = (props) => {
 							</SwiperSlide>
 						))}
 					</Swiper>
-					<div className="absolute bottom-12 left-0 z-50 flex h-10 w-full items-center justify-between">
+					<div
+						className={`absolute bottom-12 left-0 z-50 flex h-10 w-full items-center justify-between ${activeIndex === 3 ? "hidden" : ""}`}
+					>
 						<div className="btn-left flex items-center justify-center"></div>
 						<div className="btn-center flex items-center justify-center">
 							<Image
@@ -143,6 +169,22 @@ const Prof: FC<ProfProps> = (props) => {
 						<div className="btn-right flex items-center justify-center"></div>
 					</div>
 				</div>
+
+				{/* 4枚目のスワイプ完了時のみ match 画像を表示（他要素は非表示） */}
+				{activeIndex === 3 && (
+					<div className="fixed inset-0 z-[999] flex items-center justify-center">
+						<div className="relative h-screen w-screen">
+							<Image
+								className="block object-contain"
+								src={`/images/match.png`}
+								alt="Match"
+								fill
+								sizes="100vw"
+								priority
+							/>
+						</div>
+					</div>
+				)}
 			</main>
 		</>
 	);
