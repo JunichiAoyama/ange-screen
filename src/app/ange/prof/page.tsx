@@ -52,7 +52,7 @@ const Prof: FC<ProfProps> = (props) => {
 				colorTimerRef.current = window.setTimeout(() => {
 					applyColor(delayed);
 					colorTimerRef.current = null;
-				}, 500);
+				}, 1000);
 			} else {
 				// 4枚目以外では即座にベース色へ戻す
 				applyColor(base);
@@ -107,7 +107,7 @@ const Prof: FC<ProfProps> = (props) => {
 			matchTimerRef.current = window.setTimeout(() => {
 				setShowMatch(true);
 				matchTimerRef.current = null;
-			}, 500);
+			}, 1000);
 		} else {
 			// それ以外は即座に非表示
 			setShowMatch(false);
@@ -133,7 +133,7 @@ const Prof: FC<ProfProps> = (props) => {
 			afterOverlayTimerRef.current = window.setTimeout(() => {
 				setAfterOverlay(true); // ここで header/コンテンツを隠し、main 背景も赤に確定
 				afterOverlayTimerRef.current = null;
-			}, 500);
+			}, 1000);
 		} else {
 			setAfterOverlay(false);
 		}
