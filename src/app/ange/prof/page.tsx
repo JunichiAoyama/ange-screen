@@ -9,33 +9,89 @@ type ProfProps = {};
 
 const Prof: FC<ProfProps> = (props) => {
 	const [activeIndex, setActiveIndex] = useState(0);
+	const [hideAfterDelay, setHideAfterDelay] = useState(false);
+	const hideTimerRef = React.useRef<number | null>(null);
+	const colorTimerRef = React.useRef<number | null>(null);
 	useEffect(() => {
 		console.log("ページが読み込まれました。");
 	}, []);
 	useEffect(() => {
-		// iOS Safariのアドレス/メニューバー（ツールバー）色をスライドに合わせて同期
-		// 4枚目: #FF8888 / それ以外: Tailwind bg-gray-100 相当 (#f3f4f6)
-		const target = activeIndex === 3 ? "#FF8888" : "#f3f4f6";
-		try {
-			// ページ背景自体を変更（ブラウザUIの色に影響させるため html, body へ適用）
-			document.documentElement.style.backgroundColor = target;
-			document.body.style.backgroundColor = target;
+		// 背景色（html/body）と theme-color は以下のポリシーで更新:
+		// - 通常時（hideAfterDelay=false）: 直ちに #f3f4f6 に戻す
+		// - 4枚目到達1秒後にフェードを開始（hideAfterDelay=true）: 0.5秒後に #FF8888 を反映
+		const base = "#f3f4f6";
+		const delayed = "#FF8888";
 
-			// iOS Safari 等のツールバー色を変更（theme-color メタタグ）
+		const applyColor = (color: string) => {
+			document.documentElement.style.backgroundColor = color;
+			document.body.style.backgroundColor = color;
+
 			let themeMeta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
 			if (!themeMeta) {
 				themeMeta = document.createElement("meta");
 				themeMeta.name = "theme-color";
 				document.head.appendChild(themeMeta);
 			}
-			themeMeta.setAttribute("content", target);
+			themeMeta.setAttribute("content", color);
+		};
+
+		try {
+			// 前回のタイマーをクリア
+			if (colorTimerRef.current) {
+				window.clearTimeout(colorTimerRef.current);
+				colorTimerRef.current = null;
+			}
+
+			if (hideAfterDelay) {
+				// 0.5秒後に赤を反映（オーバーレイのフェード完了と同期）
+				colorTimerRef.current = window.setTimeout(() => {
+					applyColor(delayed);
+				}, 250);
+			} else {
+				// 即座にベース色へ戻す
+				applyColor(base);
+			}
 		} catch {
 			// SSR ガード（クライアントでのみ実行）
 		}
+
+		return () => {
+			if (colorTimerRef.current) {
+				window.clearTimeout(colorTimerRef.current);
+				colorTimerRef.current = null;
+			}
+		};
+	}, [hideAfterDelay]);
+
+	// 4枚目到達から1秒後に他UIをhiddenにする
+	useEffect(() => {
+		if (activeIndex === 3) {
+			// 既存のタイマーをクリア
+			if (hideTimerRef.current) {
+				window.clearTimeout(hideTimerRef.current);
+			}
+			hideTimerRef.current = window.setTimeout(() => {
+				setHideAfterDelay(true);
+			}, 500);
+		} else {
+			// 4枚目以外では即座に表示に戻す
+			if (hideTimerRef.current) {
+				window.clearTimeout(hideTimerRef.current);
+				hideTimerRef.current = null;
+			}
+			setHideAfterDelay(false);
+		}
+		return () => {
+			if (hideTimerRef.current) {
+				window.clearTimeout(hideTimerRef.current);
+				hideTimerRef.current = null;
+			}
+		};
 	}, [activeIndex]);
+
 	return (
 		<>
-			<header className={`fixed left-0 right-0 top-0 z-50 w-full ${activeIndex === 3 ? "hidden" : ""}`}>
+			<header className={`fixed left-0 right-0 top-0 z-50 w-full ${hideAfterDelay ? "hidden" : ""}`}>
 				<Image
 					className="image-fit"
 					src={`/images/_header_prof.png?ab`}
@@ -44,9 +100,13 @@ const Prof: FC<ProfProps> = (props) => {
 					priority
 				/>
 			</header>
-			<main className={`min-h-screen ${activeIndex === 3 ? "bg-[#FF8888]" : "bg-gray-100"}`}>
+			{/* 背景フェード用オーバーレイ（4枚目到達1秒後に0.5秒でフェードイン） */}
+			<div
+				className={`pointer-events-none fixed inset-0 z-40 bg-[#FF8888] transition-opacity duration-500 ease-in-out ${hideAfterDelay ? "opacity-100" : "opacity-0"}`}
+			></div>
+			<main className={`min-h-screen bg-gray-100`}>
 				<div
-					className={`girlScroll relative h-100vh w-100vw overflow-hidden ${activeIndex === 3 ? "hidden" : ""}`}
+					className={`girlScroll relative h-100vh w-100vw overflow-hidden ${hideAfterDelay ? "hidden" : ""}`}
 				>
 					<Swiper
 						className="girlScroll"
@@ -154,7 +214,7 @@ const Prof: FC<ProfProps> = (props) => {
 						))}
 					</Swiper>
 					<div
-						className={`absolute bottom-12 left-0 z-50 flex h-10 w-full items-center justify-between ${activeIndex === 3 ? "hidden" : ""}`}
+						className={`absolute bottom-12 left-0 z-50 flex h-10 w-full items-center justify-between ${hideAfterDelay ? "hidden" : ""}`}
 					>
 						<div className="btn-left flex items-center justify-center"></div>
 						<div className="btn-center flex items-center justify-center">
