@@ -10,8 +10,12 @@ type ProfProps = {};
 const Prof: FC<ProfProps> = (props) => {
 	const [activeIndex, setActiveIndex] = useState(0);
 	const [hideAfterDelay, setHideAfterDelay] = useState(false);
+	const [showMatch, setShowMatch] = useState(false);
+	const [afterOverlay, setAfterOverlay] = useState(false); // オーバーレイ完全不透明(0.5s後)の確定状態
 	const hideTimerRef = React.useRef<number | null>(null);
 	const colorTimerRef = React.useRef<number | null>(null);
+	const matchTimerRef = React.useRef<number | null>(null);
+	const afterOverlayTimerRef = React.useRef<number | null>(null);
 	useEffect(() => {
 		console.log("ページが読み込まれました。");
 	}, []);
@@ -43,12 +47,14 @@ const Prof: FC<ProfProps> = (props) => {
 			}
 
 			if (hideAfterDelay) {
-				// 0.5秒後に赤を反映（オーバーレイのフェード完了と同期）
+				// オーバーレイの0.5秒フェード（opacity 0→1）が完了したあとに
+				// html/body の背景色も #FF8888 へ反映する
 				colorTimerRef.current = window.setTimeout(() => {
 					applyColor(delayed);
-				}, 250);
+					colorTimerRef.current = null;
+				}, 500);
 			} else {
-				// 即座にベース色へ戻す
+				// 4枚目以外では即座にベース色へ戻す
 				applyColor(base);
 			}
 		} catch {
@@ -63,16 +69,15 @@ const Prof: FC<ProfProps> = (props) => {
 		};
 	}, [hideAfterDelay]);
 
-	// 4枚目到達から1秒後に他UIをhiddenにする
+	// 4枚目到達時に即座にフェード開始（他UIは0.5s後にhiddenへ）
 	useEffect(() => {
+		// 即時フェード開始: タイマー不要
 		if (activeIndex === 3) {
-			// 既存のタイマーをクリア
 			if (hideTimerRef.current) {
 				window.clearTimeout(hideTimerRef.current);
+				hideTimerRef.current = null;
 			}
-			hideTimerRef.current = window.setTimeout(() => {
-				setHideAfterDelay(true);
-			}, 500);
+			setHideAfterDelay(true);
 		} else {
 			// 4枚目以外では即座に表示に戻す
 			if (hideTimerRef.current) {
@@ -89,9 +94,61 @@ const Prof: FC<ProfProps> = (props) => {
 		};
 	}, [activeIndex]);
 
+	// オーバーレイのフェード(0.5s)が完了してから match を表示するため、さらに0.5s 遅らせる
+	useEffect(() => {
+		// まず既存のタイマーをクリア
+		if (matchTimerRef.current) {
+			window.clearTimeout(matchTimerRef.current);
+			matchTimerRef.current = null;
+		}
+
+		if (hideAfterDelay) {
+			// hideAfterDelay が true になった時点から 0.5s 後に match を表示
+			matchTimerRef.current = window.setTimeout(() => {
+				setShowMatch(true);
+				matchTimerRef.current = null;
+			}, 500);
+		} else {
+			// それ以外は即座に非表示
+			setShowMatch(false);
+		}
+
+		return () => {
+			if (matchTimerRef.current) {
+				window.clearTimeout(matchTimerRef.current);
+				matchTimerRef.current = null;
+			}
+		};
+	}, [hideAfterDelay]);
+
+	// オーバーレイが完全に不透明になったタイミング(0.5s後)でUI非表示・背景確定に切り替える
+	useEffect(() => {
+		// 既存タイマークリア
+		if (afterOverlayTimerRef.current) {
+			window.clearTimeout(afterOverlayTimerRef.current);
+			afterOverlayTimerRef.current = null;
+		}
+
+		if (hideAfterDelay) {
+			afterOverlayTimerRef.current = window.setTimeout(() => {
+				setAfterOverlay(true); // ここで header/コンテンツを隠し、main 背景も赤に確定
+				afterOverlayTimerRef.current = null;
+			}, 500);
+		} else {
+			setAfterOverlay(false);
+		}
+
+		return () => {
+			if (afterOverlayTimerRef.current) {
+				window.clearTimeout(afterOverlayTimerRef.current);
+				afterOverlayTimerRef.current = null;
+			}
+		};
+	}, [hideAfterDelay]);
+
 	return (
 		<>
-			<header className={`fixed left-0 right-0 top-0 z-50 w-full ${hideAfterDelay ? "hidden" : ""}`}>
+			<header className={`fixed left-0 right-0 top-0 z-50 w-full ${afterOverlay ? "hidden" : ""}`}>
 				<Image
 					className="image-fit"
 					src={`/images/_header_prof.png?ab`}
@@ -100,14 +157,14 @@ const Prof: FC<ProfProps> = (props) => {
 					priority
 				/>
 			</header>
-			{/* 背景フェード用オーバーレイ（4枚目到達1秒後に0.5秒でフェードイン） */}
+			{/* 背景フェード用オーバーレイ（4枚目到達0.5秒後に0.5秒でフェードイン） */}
 			<div
-				className={`pointer-events-none fixed inset-0 z-40 bg-[#FF8888] transition-opacity duration-500 ease-in-out ${hideAfterDelay ? "opacity-100" : "opacity-0"}`}
+				className={`pointer-events-none fixed inset-0 z-[60] bg-[#FF8888] transition-opacity duration-500 ease-in-out will-change-[opacity] ${hideAfterDelay ? "opacity-100" : "opacity-0"}`}
 			></div>
-			<main className={`min-h-screen bg-gray-100`}>
-				<div
-					className={`girlScroll relative h-100vh w-100vw overflow-hidden ${hideAfterDelay ? "hidden" : ""}`}
-				>
+			<main
+				className={`min-h-screen transition-colors duration-500 ease-in-out ${afterOverlay ? "bg-[#FF8888]" : "bg-gray-100"}`}
+			>
+				<div className={`girlScroll relative h-100vh w-100vw overflow-hidden ${afterOverlay ? "hidden" : ""}`}>
 					<Swiper
 						className="girlScroll"
 						spaceBetween={0}
@@ -127,7 +184,7 @@ const Prof: FC<ProfProps> = (props) => {
 										priority
 									/>
 								</div>
-								<div className="pb-5 pl-4 pr-4 pt-2">
+								<div className={`pb-5 pl-4 pr-4 pt-2 ${afterOverlay ? "hidden" : ""}`}>
 									<div className="h-[calc(100vh_-_75px)] overflow-hidden rounded-xl bg-white shadow-md">
 										<div className="relative h-[calc(100vw_-_2rem)] w-full">
 											<Image
@@ -214,7 +271,7 @@ const Prof: FC<ProfProps> = (props) => {
 						))}
 					</Swiper>
 					<div
-						className={`absolute bottom-12 left-0 z-50 flex h-10 w-full items-center justify-between ${hideAfterDelay ? "hidden" : ""}`}
+						className={`absolute bottom-12 left-0 z-50 flex h-10 w-full items-center justify-between ${afterOverlay ? "hidden" : ""}`}
 					>
 						<div className="btn-left flex items-center justify-center"></div>
 						<div className="btn-center flex items-center justify-center">
@@ -230,9 +287,9 @@ const Prof: FC<ProfProps> = (props) => {
 					</div>
 				</div>
 
-				{/* 4枚目のスワイプ完了時のみ match 画像を表示（他要素は非表示） */}
-				{activeIndex === 3 && (
-					<div className="fixed inset-0 z-[999] flex items-center justify-center">
+				{/* 4枚目到達後、オーバーレイの0.5sフェード完了後に match を表示 */}
+				{showMatch && (
+					<div className="fixed inset-0 z-[999] flex items-center justify-center bg-[#FF8888]">
 						<div className="relative h-screen w-screen">
 							<Image
 								className="block object-contain"
